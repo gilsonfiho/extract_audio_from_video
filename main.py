@@ -1,3 +1,15 @@
+"""
+===============================================================================
+Extrator de Áudio Otimizado - Ferramenta Python otimizada para extrair áudio de vídeos e dividir em chunks MP3
+===============================================================================
+
+Autor: Jose Pacelli Moreira de Oliveira (https://github.com/josepacelli)
+
+Contribuidores:
+Gilson Almeida(https://github.com/gilsonfiho)
+
+"""
+
 import cv2
 import numpy as np
 import os
@@ -422,7 +434,7 @@ def extract_and_split_to_mp3(video_path, n_parts, output_dir="output",
 # Exemplo de uso
 if __name__ == "__main__":
     # Configurações
-    VIDEO_PATH = "video.mp4"  # Seu vídeo
+    VIDEO_PATH = "video_path\example.mp4" # Seu vídeo (Ajuste conforme o local do seu arquivo e SO)
     N_PARTS = 5  # Número de partes
     OUTPUT_DIR = "output"  # Diretório de saída
     QUALITY = "medium"  # low, medium, high
