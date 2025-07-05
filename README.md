@@ -236,6 +236,37 @@ for i in range(0, total_duration, 600):  # 10 min cada
 ### Saída
 - **Áudio**: MP3 (mono, otimizado)
 
+## 📝 Transcrição de Áudio com Whisper
+
+Este projeto inclui um script independente para **transcrever arquivos MP3** usando o modelo Whisper da OpenAI.
+
+### 🔧 Requisitos
+
+- `openai-whisper`
+
+### ▶️ Como usar
+
+1. Execute a funcionalidade principal para gerar um .mp3 no diretório `/output`  
+2. Execute o script:
+
+```bash
+python transcrever_audio.py
+```
+
+O script irá:
+
+- Carregar o modelo Whisper (`base`)
+- Transcrever o arquivo `audio/video_parte_001.mp3`
+- Salvar a transcrição como `transcricoes/video_parte_001.txt`
+
+### 📂 Exemplo de entrada e saída
+
+```
+output/
+└── video_parte_001.mp3
+└── video_parte_001.txt
+```
+
 ## 🤝 Contribuição
 
 1. Fork o repositório
