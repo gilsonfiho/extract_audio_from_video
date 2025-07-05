@@ -6,6 +6,9 @@ from pathlib import Path
 import subprocess
 import tempfile
 import shutil
+from tqdm import tqdm
+import threading
+import time
 
 
 class OpenCVAudioExtractor:
@@ -110,8 +113,9 @@ class OpenCVAudioExtractor:
             print(f"Duração: {self.video_info['duration']:.2f}s")
             print(f"Qualidade: {quality} ({settings['bitrate']})")
 
-            # Executar comando
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Executar comando com barra de progresso
+            result = self._run_ffmpeg_with_progress(cmd, self.video_info['duration'],
+                                                    "Extraindo áudio")
 
             if result.returncode != 0:
                 print(f"Erro FFmpeg: {result.stderr}")
@@ -163,41 +167,46 @@ class OpenCVAudioExtractor:
             print(f"Duração total: {duration:.2f}s")
             print(f"Duração por parte: {chunk_duration:.2f}s")
 
-            for i in range(n_parts):
-                start_time = i * chunk_duration
+            # Barra de progresso para divisão
+            with tqdm(total=n_parts, desc="Dividindo áudio", unit="parte") as pbar:
+                for i in range(n_parts):
+                    start_time = i * chunk_duration
 
-                # Última parte pega o resto
-                if i == n_parts - 1:
-                    chunk_duration_actual = duration - start_time
-                else:
-                    chunk_duration_actual = chunk_duration
+                    # Última parte pega o resto
+                    if i == n_parts - 1:
+                        chunk_duration_actual = duration - start_time
+                    else:
+                        chunk_duration_actual = chunk_duration
 
-                # Nome do arquivo da parte
-                part_filename = f"{base_name}_parte_{i + 1:03d}.mp3"
-                part_path = os.path.join(output_dir, part_filename)
+                    # Nome do arquivo da parte
+                    part_filename = f"{base_name}_parte_{i + 1:03d}.mp3"
+                    part_path = os.path.join(output_dir, part_filename)
 
-                # Comando FFmpeg para dividir
-                cmd = [
-                    'ffmpeg',
-                    '-i', audio_path,
-                    '-ss', str(start_time),
-                    '-t', str(chunk_duration_actual),
-                    '-acodec', 'copy',  # Copiar sem recodificar
-                    '-avoid_negative_ts', 'make_zero', # Evitar timestamps negativos
-                    '-loglevel', 'error',
-                    '-y',
-                    part_path
-                ]
+                    # Comando FFmpeg para dividir
+                    cmd = [
+                        'ffmpeg',
+                        '-i', audio_path,
+                        '-ss', str(start_time),
+                        '-t', str(chunk_duration_actual),
+                        '-acodec', 'copy',  # Copiar sem recodificar
+                        '-avoid_negative_ts', 'make_zero',
+                        '-loglevel', 'error',
+                        '-y',
+                        part_path
+                    ]
 
-                # Executar comando
-                result = subprocess.run(cmd, capture_output=True, text=True)
+                    # Executar comando
+                    result = subprocess.run(cmd, capture_output=True, text=True)
 
-                if result.returncode == 0 and os.path.exists(part_path):
-                    size_mb = os.path.getsize(part_path) / (1024 * 1024)
-                    split_files.append(part_path)
-                    print(f"Parte {i + 1}/{n_parts}: {part_filename} ({size_mb:.2f}MB)")
-                else:
-                    print(f"Erro ao criar parte {i + 1}: {result.stderr}")
+                    if result.returncode == 0 and os.path.exists(part_path):
+                        size_mb = os.path.getsize(part_path) / (1024 * 1024)
+                        split_files.append(part_path)
+                        pbar.set_postfix(arquivo=part_filename, tamanho=f"{size_mb:.2f}MB")
+                    else:
+                        pbar.set_postfix(erro=f"Falha na parte {i + 1}")
+                        print(f"Erro ao criar parte {i + 1}: {result.stderr}")
+
+                    pbar.update(1)
 
             return split_files
 
@@ -233,6 +242,20 @@ class OpenCVAudioExtractor:
 
         except Exception:
             return 0.0
+
+    def _check_ffmpeg(self):
+        """
+        Verifica se FFmpeg está disponível
+
+        Returns:
+            bool: True se disponível
+        """
+        try:
+            result = subprocess.run(['ffmpeg', '-version'],
+                                    capture_output=True, text=True)
+            return result.returncode == 0
+        except:
+            return False
 
     def process_video_to_mp3_chunks(self, n_parts, output_dir="output",
                                     quality="medium", cleanup=True):
@@ -296,19 +319,84 @@ class OpenCVAudioExtractor:
 
         return result
 
-    def _check_ffmpeg(self):
+    def _run_ffmpeg_with_progress(self, cmd, duration, description):
         """
-        Verifica se FFmpeg está disponível
+        Executa comando FFmpeg com barra de progresso
+
+        Args:
+            cmd (list): Comando FFmpeg
+            duration (float): Duração total em segundos
+            description (str): Descrição para a barra de progresso
 
         Returns:
-            bool: True se disponível
+            subprocess.CompletedProcess: Resultado da execução
         """
         try:
-            result = subprocess.run(['ffmpeg', '-version'],
-                                    capture_output=True, text=True)
-            return result.returncode == 0
-        except:
-            return False
+            # Modificar comando para mostrar progresso
+            cmd_with_progress = cmd.copy()
+            # Remover -loglevel error para capturar progresso
+            if '-loglevel' in cmd_with_progress:
+                idx = cmd_with_progress.index('-loglevel')
+                cmd_with_progress[idx + 1] = 'info'
+
+            # Executar processo
+            process = subprocess.Popen(
+                cmd_with_progress,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+                universal_newlines=True
+            )
+
+            # Barra de progresso
+            with tqdm(total=int(duration), desc=description, unit="s") as pbar:
+                current_time = 0
+
+                while True:
+                    output = process.stderr.readline()
+                    if output == '' and process.poll() is not None:
+                        break
+
+                    if output:
+                        # Procurar por tempo atual no output do FFmpeg
+                        if 'time=' in output:
+                            try:
+                                time_str = output.split('time=')[1].split()[0]
+                                if ':' in time_str:
+                                    # Converter HH:MM:SS.ms para segundos
+                                    time_parts = time_str.split(':')
+                                    if len(time_parts) >= 3:
+                                        hours = float(time_parts[0])
+                                        minutes = float(time_parts[1])
+                                        seconds = float(time_parts[2])
+                                        new_time = hours * 3600 + minutes * 60 + seconds
+
+                                        if new_time > current_time:
+                                            pbar.update(int(new_time - current_time))
+                                            current_time = new_time
+                            except:
+                                pass
+
+                # Completar barra se necessário
+                if current_time < duration:
+                    pbar.update(int(duration - current_time))
+
+            # Aguardar conclusão
+            stdout, stderr = process.communicate()
+
+            # Criar objeto de resultado compatível
+            class Result:
+                def __init__(self, returncode, stdout, stderr):
+                    self.returncode = returncode
+                    self.stdout = stdout
+                    self.stderr = stderr
+
+            return Result(process.returncode, stdout, stderr)
+
+        except Exception as e:
+            print(f"Erro ao executar FFmpeg: {str(e)}")
+            # Fallback para execução sem progresso
+            return subprocess.run(cmd, capture_output=True, text=True)
 
 
 # Função simples para uso direto
@@ -335,9 +423,9 @@ def extract_and_split_to_mp3(video_path, n_parts, output_dir="output",
 if __name__ == "__main__":
     # Configurações
     VIDEO_PATH = "video.mp4"  # Seu vídeo
-    N_PARTS = 20  # Número de partes
+    N_PARTS = 5  # Número de partes
     OUTPUT_DIR = "output"  # Diretório de saída
-    QUALITY = "low"  # low, medium, high
+    QUALITY = "medium"  # low, medium, high
 
     # Verificar arquivo
     if not os.path.exists(VIDEO_PATH):
