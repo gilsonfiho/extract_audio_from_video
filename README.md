@@ -236,15 +236,6 @@ for i in range(0, total_duration, 600):  # 10 min cada
 ### Saída
 - **Áudio**: MP3 (mono, otimizado)
 
-## 📈 Performance
-
-### Benchmarks (vídeo 1h, 1080p)
-| Qualidade | Tempo | Tamanho | RAM |
-|-----------|-------|---------|-----|
-| Low       | 2m30s | 28MB    | 256MB |
-| Medium    | 3m15s | 56MB    | 384MB |
-| High      | 4m45s | 84MB    | 512MB |
-
 ## 🤝 Contribuição
 
 1. Fork o repositório
