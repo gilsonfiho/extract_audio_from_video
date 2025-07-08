@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 # Pasta com os arquivos .mp3 acelerados e seus .txt
-PASTA = r"C:\Users\gilso\OneDrive\Área de Trabalho\git\extract_audio_from_video\output"
+PASTA = "output"
 
 # Carrega o modelo Whisper (opções: tiny, base, small, medium, large)
 model = whisper.load_model("base")
