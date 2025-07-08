@@ -452,7 +452,7 @@ if __name__ == "__main__":
     N_PARTS = 1  # Número de partes
     OUTPUT_DIR = "output"  # Diretório de saída
     QUALITY = "medium"  # low, medium, high
-    SPEED = 1.8 #Velocidade do video o valor (1) e o default e não acessa a função de aceleração do audio
+    SPEED = 2 #Velocidade do video o valor (1) e o default e não acessa a função de aceleração do audio
 
     # Verificar arquivo
     if not os.path.exists(VIDEO_PATH):
