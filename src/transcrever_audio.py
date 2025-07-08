@@ -30,7 +30,7 @@ def transcrever():
     """
 
     # Caminho do arquivo MP3 (ajuste conforme o local do seu arquivo e SO)
-    audio_path = r"C:\Users\gilso\OneDrive\Área de Trabalho\git\extract_audio_from_video\output\example_speed_1.20_parte_001.mp3" 
+    audio_path = r"C:\Users\gilso\OneDrive\Área de Trabalho\git\extract_audio_from_video\output\example_speed_2.00_parte_001.mp3" 
 
     # Verifica se o arquivo existe
     if not os.path.exists(audio_path):
