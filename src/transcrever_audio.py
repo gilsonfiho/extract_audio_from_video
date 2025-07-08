@@ -30,7 +30,7 @@ def transcrever():
     """
 
     # Caminho do arquivo MP3 (ajuste conforme o local do seu arquivo e SO)
-    audio_path = "output\example_parte_001.mp3"
+    audio_path = "\output\example_speed_2.00_parte_001.mp3" 
 
     # Verifica se o arquivo existe
     if not os.path.exists(audio_path):

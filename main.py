@@ -22,6 +22,7 @@ from tqdm import tqdm
 import threading
 import time
 
+from src.audio_utils import accelerate_chunk
 
 class OpenCVAudioExtractor:
     def __init__(self, video_path):
@@ -270,7 +271,7 @@ class OpenCVAudioExtractor:
             return False
 
     def process_video_to_mp3_chunks(self, n_parts, output_dir="output",
-                                    quality="medium", cleanup=True):
+                                    quality="medium", cleanup=True, speed=1.0):
         """
         Processa vídeo completo: extrai áudio e divide em chunks MP3
 
@@ -295,6 +296,19 @@ class OpenCVAudioExtractor:
         audio_path = self.extract_audio_to_mp3(output_dir, quality)
         if audio_path is None:
             return {"success": False, "error": "Falha na extração de áudio"}
+        
+        # Se speed diferente de 1, aplica aceleração/desaceleração no arquivo extraído
+        if speed != 1.0:
+            accelerated_path = accelerate_chunk(audio_path, speed=speed)
+            if accelerated_path and Path(accelerated_path).exists():
+                try:
+                    os.remove(audio_path)  # Remove original, se quiser
+                except Exception:
+                    pass
+                audio_path = accelerated_path
+            else:
+                print("Falha ao acelerar/desacelerar áudio")
+                return {"success": False, "error": "Falha ao acelerar/desacelerar áudio"}
 
         # Dividir áudio
         split_files = self.split_audio_chunks(audio_path, n_parts, output_dir)
@@ -413,7 +427,7 @@ class OpenCVAudioExtractor:
 
 # Função simples para uso direto
 def extract_and_split_to_mp3(video_path, n_parts, output_dir="output",
-                             quality="medium", cleanup=True):
+                             quality="medium", cleanup=True, speed = 1.0):
     """
     Função otimizada para extrair áudio e dividir em chunks MP3
 
@@ -428,16 +442,17 @@ def extract_and_split_to_mp3(video_path, n_parts, output_dir="output",
         dict: Resultado do processamento
     """
     extractor = OpenCVAudioExtractor(video_path)
-    return extractor.process_video_to_mp3_chunks(n_parts, output_dir, quality, cleanup)
+    return extractor.process_video_to_mp3_chunks(n_parts, output_dir, quality, cleanup, speed)
 
 
 # Exemplo de uso
 if __name__ == "__main__":
     # Configurações
     VIDEO_PATH = "video_path\example.mp4" # Seu vídeo (Ajuste conforme o local do seu arquivo e SO)
-    N_PARTS = 5  # Número de partes
+    N_PARTS = 1  # Número de partes
     OUTPUT_DIR = "output"  # Diretório de saída
     QUALITY = "medium"  # low, medium, high
+    SPEED = 2 #Velocidade do video o valor (1) e o default e não acessa a função de aceleração do audio
 
     # Verificar arquivo
     if not os.path.exists(VIDEO_PATH):
@@ -454,7 +469,8 @@ if __name__ == "__main__":
             n_parts=N_PARTS,
             output_dir=OUTPUT_DIR,
             quality=QUALITY,
-            cleanup=True
+            cleanup=True,
+            speed = SPEED
         )
 
         # Mostrar resultados
