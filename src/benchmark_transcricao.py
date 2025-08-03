@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 # Pasta com os arquivos .mp3 acelerados e seus .txt
-PASTA = "output"
+PASTA = r"\extract_audio_from_video\output"
 
 # Carrega o modelo Whisper (opções: tiny, base, small, medium, large)
 model = whisper.load_model("base")
@@ -46,5 +46,3 @@ print("-" * 60)
 for r in resultados:
     print(f"{r['velocidade']:<12} {r['tempo']:<10.2f} {r['texto'][:90]}")
 
-
-# Opcional: salvar CSV ou JSON com resultados
